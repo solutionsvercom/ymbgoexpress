@@ -1,5 +1,4 @@
 import React from 'react';
-import logoImg from '../../images/ymbgo_logo.png';
 
 const scrollTo = id => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
@@ -9,7 +8,7 @@ export default function Footer() {
       <div className="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <img src={logoImg} alt="YMB GoExpress" className="h-8 w-auto" />
+            <img src="/images/ymbgo_logo.png" alt="YMB GoExpress" className="h-8 w-auto" />
             <span className="font-bold text-lg" style={{ fontFamily: 'Montserrat, sans-serif' }}>
               YMB <span className="text-[#E8762C]">GoExpress</span>
             </span>
