@@ -30,5 +30,5 @@ Desktop.ini
 # misc
 *.tsbuildinfo
 
-# This repo has no root package.json; ignore root lockfile noise
-/package-lock.json
+# lockfiles
+# (commit root lockfile; it pins workspace installs for deploys)
