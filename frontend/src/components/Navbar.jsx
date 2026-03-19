@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import logoImg from '../../images/ymbgo_logo.png';
 
 const navLinks = [
   { label: 'Home', href: 'home' },
@@ -41,7 +40,7 @@ export default function Navbar() {
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-md">
       <div className="max-w-[1200px] mx-auto px-6 flex items-center justify-between h-16">
         <div className="flex items-center gap-2">
-          <img src={logoImg} style={{ height: '70px' }} alt="YMB GoExpress" className="h-9 w-auto" />
+        <img src="/images/ymbgo_logo.png" alt="YMB GoExpress" className="h-8 w-auto" />
           {/* <span className="font-bold text-[#0D5C63] text-lg" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             YMB <span className="text-[#E8762C]">GoExpress</span>
           </span> */}
