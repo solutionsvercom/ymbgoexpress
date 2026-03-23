@@ -12,7 +12,7 @@ export default function HeroSection() {
   }, []);
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+    <div className="relative min-h-[90vh] md:min-h-screen flex flex-col items-center justify-start overflow-hidden pt-4 md:pt-[80px] lg:pt-[100px]">
       <div className="absolute inset-0 bg-cover bg-center ">
         
         {/* <img src="/images/Hero Section (Web View).png" alt=""  width="100%" height="100%" className="object-cover" /> */}
@@ -41,27 +41,27 @@ export default function HeroSection() {
 <div className="absolute inset-0 bg-gradient-to-b from-[#0D5C63]/85 from-5% via-transparent to-[#0D5C63]/85 to-95%" />  
       
 
-      <div className="relative z-10 text-center px-6 pt-20 pb-10 w-full max-w-5xl mx-auto">
+      <div className="relative z-10 text-center px-6 pt-2 md:pt-0 pb-20 md:pb-10 w-full max-w-5xl mx-auto">
         
         <h1 className="text-4xl md:text-6xl font-extrabold text-white mb-4 leading-tight" style={{ fontFamily: 'Montserrat, sans-serif' }}>
           Travel in <span className="text-[#E8762C]">Royal Comfort</span>
         </h1>
-        <p className="text-white/80 text-lg mb-2">Indore → Gwalior → Morena | AC Sleeper & Seater Buses</p>
+        <p className="text-white/80 text-lg mb-2">Indore → Gwalior → Agra | AC Sleeper & Seater Buses</p>
         <p className="text-[#E8762C] text-xl italic mb-8" style={{ fontFamily: 'Poppins, sans-serif' }}>यात्रा खास, सेवा रॉयल</p>
 
         {/* <SearchWidget /> */}
 
-        <div className="flex flex-wrap justify-center gap-4 mt-8">
+        {/* <div className="flex flex-wrap justify-center gap-4 mt-8">
           {['✅ 100% Safe', '❄️ AC Buses', '🛌 Sleeper Available', '📍 Live Tracking'].map(badge => (
             <span key={badge} className="bg-white/10 backdrop-blur text-white text-sm px-4 py-2 rounded-full border border-white/20">
               {badge}
             </span>
           ))}
-        </div>
+        </div> */}
       </div>
 
       <div
-        className="absolute bottom-8 text-4xl transition-all duration-100"
+        className="absolute bottom-6 md:bottom-8 text-3xl md:text-4xl transition-all duration-100 pointer-events-none"
         style={{ left: `${busPos}%`, transform: 'translateX(-50%)' }}
       >
         <i className="fa-solid fa-bus text-[#E8762C] drop-shadow-lg"></i>

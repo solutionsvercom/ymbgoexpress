@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 
-const cities = ['Indore', 'Dewas', 'Gwalior', 'Morena'];
+const cities = ['Indore', 'Dewas', 'Gwalior', 'Morena', 'Agra'];
 
 export default function LiveTrackingSection() {
   const [busPosition, setBusPosition] = useState(0);
-  const [trackingId, setTrackingId] = useState('');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -61,14 +60,7 @@ export default function LiveTrackingSection() {
             ))}
           </div>
 
-          <div className="flex gap-3 max-w-md mx-auto">
-            <input value={trackingId} onChange={e => setTrackingId(e.target.value)}
-              placeholder="Enter Booking ID (e.g. YMB1234)"
-              className="flex-1 bg-white/10 border border-white/20 text-white placeholder-white/50 rounded-xl px-4 py-2.5 text-sm focus:outline-none" />
-            <button className="bg-[#E8762C] text-white px-5 py-2.5 rounded-xl font-medium hover:bg-[#d4681f] transition-all text-sm whitespace-nowrap">
-              Track Bus
-            </button>
-          </div>
+          {/* Track-Booking-ID UI intentionally removed per request */}
         </div>
       </div>
     </section>

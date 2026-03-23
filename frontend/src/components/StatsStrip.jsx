@@ -26,7 +26,7 @@ function AnimatedCounter({ target, suffix = '' }) {
 const stats = [
   { icon: 'fa-users', value: 50000, suffix: '+', label: 'Happy Passengers' },
   { icon: 'fa-route', value: 10, suffix: '+', label: 'Routes Covered' },
-  { icon: 'fa-bus', value: 25, suffix: '+', label: 'Modern Buses' },
+  { icon: 'fa-bus', value: 10, suffix: '+', label: 'Modern Buses' },
   { icon: 'fa-star', value: 4.8, suffix: '/5', label: 'Average Rating', static: true },
 ];
 

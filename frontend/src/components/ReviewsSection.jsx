@@ -19,7 +19,7 @@ export default function ReviewsSection() {
             What Passengers Say
           </h2>
           <div className="mt-4 text-4xl font-bold text-[#0D5C63]">4.8 ⭐</div>
-          <div className="text-gray-500 text-sm">Based on 1,200+ reviews</div>
+          <div className="text-gray-500 text-sm">Based on 500+ reviews</div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {reviews.map((r, i) => (

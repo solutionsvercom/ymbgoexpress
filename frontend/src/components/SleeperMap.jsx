@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ROWS = 7;
+const ROWS = 9;
 
 export default function SleeperMap({ selectedSeats, onSeatToggle, bookedSeats = [] }) {
   const getSeatStatus = (seat) => {

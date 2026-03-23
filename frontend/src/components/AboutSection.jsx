@@ -12,7 +12,7 @@ export default function AboutSection() {
             </h2>
             <p className="text-[#0D7377] text-xl italic mb-6">यात्रा खास, सेवा रॉयल</p>
             <p className="text-[#374151] mb-6 leading-relaxed text-sm">
-              YMB GoExpress was founded to give people of Madhya Pradesh a safe, comfortable, and premium overnight travel experience from Indore to Morena via Gwalior. We believe every journey should feel special.
+              YMB GoExpress was founded to give people of Madhya Pradesh a safe, comfortable, and premium overnight travel experience from Indore to Agra via Gwalior. We believe every journey should feel special.
             </p>
             <p className="text-[#374151] mb-8 leading-relaxed text-sm">
               Our fleet of modern buses equipped with AC, comfortable seating, and sleeper options ensures you arrive refreshed. With live tracking, trained staff, and a commitment to safety, YMB GoExpress is your trusted travel partner.

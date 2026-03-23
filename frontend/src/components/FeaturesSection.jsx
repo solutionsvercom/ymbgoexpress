@@ -3,9 +3,11 @@ import React, { useEffect, useRef } from 'react';
 const features = [
   { icon: 'fa-wand-magic-sparkles', title: 'Spotless Cleanliness', desc: 'Sanitized before every journey' },
   { icon: 'fa-bottle-water', title: 'Water Bottle', desc: 'Complimentary for each passenger' },
-  { icon: 'fa-utensils', title: 'Snacks on Board', desc: 'Light refreshments included' },
+  { icon: 'fa-wifi', title: 'WiFi', desc: 'Free onboard Wi-Fi for your journey' },
+  { icon: 'fa-utensils', title: 'Snacks', desc: 'Light snacks included' },
   { icon: 'fa-bed', title: 'Blanket Service', desc: 'Soft blankets for night travel' },
   { icon: 'fa-shield-halved', title: 'Women Safety', desc: 'CCTV & dedicated support' },
+  { icon: 'fa-kit-medical', title: 'Sanitary Pads for Women', desc: 'Available on request during travel' },
   { icon: 'fa-user', title: 'Trained Staff', desc: 'Professional & courteous crew' },
   { icon: 'fa-chair', title: 'Rest Stops', desc: 'Planned breaks at premium stops' },
   { icon: 'fa-clock', title: 'Always On-Time', desc: 'Punctuality is our promise' },

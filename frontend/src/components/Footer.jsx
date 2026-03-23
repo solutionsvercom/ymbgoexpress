@@ -9,7 +9,7 @@ export default function Footer() {
       <div className="max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <img src={logoImg} alt="YMB GoExpress" className="h-8 w-auto" />
+            <img src={logoImg} alt="YMB GoExpress" className="h-9 w-[140px] object-contain" />
             <span className="font-bold text-lg" style={{ fontFamily: 'Montserrat, sans-serif' }}>
               YMB <span className="text-[#E8762C]">GoExpress</span>
             </span>

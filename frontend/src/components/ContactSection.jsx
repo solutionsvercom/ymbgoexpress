@@ -36,6 +36,7 @@ export default function ContactSection() {
               { icon: 'fa-whatsapp fa-brands', label: 'WhatsApp', value: '+91 97551 24554', href: `https://wa.me/${WA_NUMBER}`, color: 'bg-green-500' },
               { icon: 'fa-phone', label: 'Phone', value: '+91 97551 24554', href: 'tel:+9197551 24554', color: 'bg-[#0D7377]' },
               { icon: 'fa-envelope', label: 'Email', value: 'ymbgoexpress@gmail.com', href: 'mailto:ymbgoexpress@gmail.com', color: 'bg-[#E8762C]' },
+              { icon: 'fa-instagram fa-brands', label: 'Instagram', value: '@ymbgoexpress', href: 'https://www.instagram.com/ymbgoexpress?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==', color: 'bg-pink-600' },
             ].map(c => (
               <a key={c.label} href={c.href} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-4 bg-white rounded-2xl p-5 shadow hover:shadow-lg transition-all group">

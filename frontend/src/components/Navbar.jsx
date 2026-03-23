@@ -40,9 +40,13 @@ export default function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-md">
-      <div className="max-w-[1200px] mx-auto px-6 flex items-center justify-between h-16">
+      <div className="max-w-[1200px] mx-auto px-6 flex items-center justify-between min-h-[80px] md:min-h-[100px]">
         <div className="flex items-center gap-2">
-          <img src="/images/ymbgo_logo.png" style={{ height: '70px' }} alt="YMB GoExpress" className="h-9 w-auto" />
+          <img
+            src="/images/ymbgo_logo.png"
+            alt="YMB GoExpress"
+            className="h-[80px] w-auto md:h-[80px] object-contain py-1"
+          />
           {/* <span className="font-bold text-[#0D5C63] text-lg" style={{ fontFamily: 'Montserrat, sans-serif' }}>
             YMB <span className="text-[#E8762C]">GoExpress</span>
           </span> */}

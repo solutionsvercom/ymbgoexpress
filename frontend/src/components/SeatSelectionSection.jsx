@@ -58,25 +58,13 @@ export default function SeatSelectionSection() {
           </h2>
         </div>
 
-        <div className="flex justify-center gap-4 mb-10">
-          {['Bus Type', 'Seat', 'Payment'].map((label, i) => (
-            <div key={label} className="flex items-center gap-2">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step > i + 1 ? 'bg-green-500 text-white' : step === i + 1 ? 'bg-[#0D7377] text-white' : 'bg-gray-200 text-gray-500'}`}>
-                {step > i + 1 ? '✓' : i + 1}
-              </div>
-              <span className="text-sm text-gray-600 hidden md:block">{label}</span>
-              {i < 2 && <div className="w-8 h-0.5 bg-gray-200" />}
-            </div>
-          ))}
-        </div>
-
         {step === 1 && (
           <div className="flex justify-center max-w-xl mx-auto">
             <button disabled onClick={() => { setBusType('sleeper'); setSelectedSeats([]); setStep(2); }}
               className="bg-white rounded-2xl p-6 shadow hover:shadow-xl border-2 border-transparent hover:border-[#0D7377] transition-all text-center">
               <div className="text-4xl mb-3">🛌</div>
               <h3 className="font-bold text-[#0D5C63] text-lg mb-1">AC Sleeper</h3>
-              <p className="text-gray-500 text-sm mb-3">28 berths, upper & lower</p>
+              <p className="text-gray-500 text-sm mb-3">36 berths, upper & lower</p>
               <span className="text-[#E8762C] font-bold">₹{PRICE.sleeper} / seat</span>
             </button>
           </div>
