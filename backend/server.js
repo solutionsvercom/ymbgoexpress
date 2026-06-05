@@ -11,7 +11,7 @@ const trackingRouter = require('./routes/tracking');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000')
+const allowedOrigins = (process.env.CORS_ORIGIN || 'https://ymbgoexpress.in,http://localhost:3000')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
