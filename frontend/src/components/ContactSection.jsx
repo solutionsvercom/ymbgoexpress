@@ -2,20 +2,43 @@ import React, { useState } from 'react';
 import axios from 'axios';
 
 const WA_NUMBER = '9755124554';
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function ContactSection() {
-  const [form, setForm] = useState({ name: '', phone: '', message: '' });
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: '',
+    website: '',
+  });
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const setField = (key, value) => setForm((prev) => ({ ...prev, [key]: value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+
+    if (!form.name.trim() || !form.email.trim() || !form.phone.trim() || !form.message.trim()) {
+      setError('Please fill all required fields.');
+      return;
+    }
+    if (!emailRegex.test(form.email.trim())) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
     setLoading(true);
     try {
       await axios.post('/api/contact', form);
       setSent(true);
-    } catch {
-      alert('Failed to send. Try WhatsApp instead.');
+    } catch (err) {
+      const serverError = err?.response?.data?.error;
+      setError(serverError || 'Unable to send your message right now. Please try again.');
     }
     setLoading(false);
   };
@@ -60,12 +83,47 @@ export default function ContactSection() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Your Name" required
+                <input
+                  value={form.name}
+                  onChange={(e) => setField('name', e.target.value)}
+                  placeholder="Your Name"
+                  required
                   className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0D7377]" />
-                <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="Phone Number" required
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setField('email', e.target.value)}
+                  placeholder="Your Email"
+                  required
                   className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0D7377]" />
-                <textarea value={form.message} onChange={e => setForm({ ...form, message: e.target.value })} placeholder="Your Message" rows={4} required
+                <input
+                  value={form.phone}
+                  onChange={(e) => setField('phone', e.target.value)}
+                  placeholder="Phone Number"
+                  required
+                  className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0D7377]" />
+                <input
+                  value={form.subject}
+                  onChange={(e) => setField('subject', e.target.value)}
+                  placeholder="Subject (optional)"
+                  className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0D7377]" />
+                <textarea
+                  value={form.message}
+                  onChange={(e) => setField('message', e.target.value)}
+                  placeholder="Your Message"
+                  rows={4}
+                  required
                   className="w-full border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-[#0D7377] resize-none" />
+                {/* Honeypot field for bots; should remain empty for real users */}
+                <input
+                  value={form.website}
+                  onChange={(e) => setField('website', e.target.value)}
+                  autoComplete="off"
+                  tabIndex={-1}
+                  aria-hidden="true"
+                  className="hidden"
+                />
+                {error ? <p className="text-sm text-red-600">{error}</p> : null}
                 <button type="submit" disabled={loading}
                   className="w-full bg-[#E8762C] text-white py-3 rounded-xl font-semibold hover:bg-[#d4681f] transition-all disabled:opacity-50">
                   {loading ? 'Sending...' : 'Send Message'}

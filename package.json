@@ -1,0 +1,14 @@
+{
+  "name": "ymb-goexpress",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix frontend && npm install --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "copy:public": "node scripts/copy-public.js",
+    "deploy:prepare": "npm run build:frontend && npm run copy:public",
+    "start": "npm start --prefix backend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend"
+  }
+}

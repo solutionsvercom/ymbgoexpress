@@ -1,3 +1,4 @@
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -10,7 +11,12 @@ const trackingRouter = require('./routes/tracking');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -21,6 +27,18 @@ app.use('/api/tracking', trackingRouter);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'YMB GoExpress API is running' });
+});
+
+const publicDir = path.join(__dirname, 'public');
+app.use(express.static(publicDir));
+
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(publicDir, 'index.html'), (err) => {
+    if (err) next();
+  });
 });
 
 app.use((req, res) => {
