@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node backend/server.js",
-    "build": "npm --prefix backend install --omit=dev && npm --prefix frontend install && npm --prefix frontend run build",
+    "build": "npm --prefix backend install --omit=dev && npm --prefix frontend install --include=dev && npm --prefix frontend run build",
     "dev": "npm --prefix backend run dev"
   }
 }
