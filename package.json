@@ -1,0 +1,14 @@
+{
+  "name": "ymbgoexpress",
+  "version": "1.0.0",
+  "private": true,
+  "description": "YMB GoExpress — Node.js app for Hostinger (API + built frontend in backend/public)",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "start": "node backend/server.js",
+    "build": "npm --prefix backend install --omit=dev && npm --prefix frontend install && npm --prefix frontend run build",
+    "dev": "npm --prefix backend run dev"
+  }
+}
