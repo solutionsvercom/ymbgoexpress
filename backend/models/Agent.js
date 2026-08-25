@@ -6,13 +6,12 @@ const agentSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     code: { type: String, required: true, trim: true },
     phone: { type: String, default: '' },
-    email: { type: String, default: '' },
     commissionPercent: { type: Number, default: 0, min: 0, max: 100 },
     active: { type: Boolean, default: true }
   },
   { timestamps: true }
 );
 
-agentSchema.index({ officeId: 1, code: 1 }, { unique: true });
+agentSchema.index({ officeId: 1, code: 1 });
 
 module.exports = mongoose.model('Agent', agentSchema);

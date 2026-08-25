@@ -94,6 +94,9 @@ async function seed() {
     console.log(`✅ Seeded ${seedBuses.length} buses`);
   }
 
+  await Agent.collection.dropIndex('officeId_1_code_1').catch(() => {});
+  await Agent.syncIndexes().catch(() => {});
+
   if ((await Office.countDocuments()) === 0) {
     const [gwalior, indore, ujjain] = await Office.create([
       { name: 'Gwalior office', city: 'Gwalior', code: 'GWL', type: 'branch', commissionPercent: 0, address: 'Gwalior, Madhya Pradesh' },

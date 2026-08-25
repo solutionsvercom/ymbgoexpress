@@ -97,6 +97,24 @@ router.delete('/offices/:id', async (req, res) => {
   res.json({ success: true, message: 'Office deleted' });
 });
 
+function agentPayload(body = {}) {
+  const updates = {};
+  for (const key of ['officeId', 'name', 'code', 'phone', 'commissionPercent', 'active']) {
+    if (body[key] !== undefined) updates[key] = body[key];
+  }
+  if (updates.officeId) updates.officeId = String(updates.officeId);
+  if (updates.name !== undefined) updates.name = String(updates.name || '').trim();
+  if (updates.code !== undefined) updates.code = String(updates.code || '').trim();
+  if (updates.phone !== undefined) updates.phone = String(updates.phone || '').trim();
+  if (updates.commissionPercent !== undefined) updates.commissionPercent = Number(updates.commissionPercent) || 0;
+  return updates;
+}
+
+async function nextAgentCode(officeId) {
+  const count = await Agent.countDocuments({ officeId });
+  return count === 0 ? 'Agent' : `A${count + 1}`;
+}
+
 router.get('/agents', async (req, res) => {
   const filter = req.query.officeId ? { officeId: req.query.officeId } : {};
   const agents = await Agent.find(filter).populate('officeId', 'name city code').sort({ createdAt: -1 });
@@ -105,7 +123,12 @@ router.get('/agents', async (req, res) => {
 
 router.post('/agents', async (req, res) => {
   try {
-    const agent = await Agent.create(req.body);
+    const payload = agentPayload(req.body);
+    if (!payload.officeId || !payload.name) {
+      return res.status(400).json({ success: false, error: 'Office and name are required' });
+    }
+    if (!payload.code) payload.code = await nextAgentCode(payload.officeId);
+    const agent = await Agent.create(payload);
     res.status(201).json({ success: true, data: await agent.populate('officeId', 'name city code') });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message || 'Could not add agent' });
@@ -113,11 +136,15 @@ router.post('/agents', async (req, res) => {
 });
 
 router.patch('/agents/:id', async (req, res) => {
-  const agent = await Agent.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true })
-    .populate('officeId', 'name city code')
-    .catch(() => null);
-  if (!agent) return res.status(404).json({ success: false, error: 'Agent not found' });
-  res.json({ success: true, data: agent });
+  try {
+    const updates = agentPayload(req.body);
+    const agent = await Agent.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true })
+      .populate('officeId', 'name city code');
+    if (!agent) return res.status(404).json({ success: false, error: 'Agent not found' });
+    res.json({ success: true, data: agent });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'Could not save agent' });
+  }
 });
 
 router.delete('/agents/:id', async (req, res) => {
