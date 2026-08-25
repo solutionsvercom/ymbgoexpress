@@ -14,14 +14,17 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (
-      err.response?.status === 401 &&
-      window.location.pathname.startsWith('/admin') &&
-      !window.location.pathname.includes('/login')
-    ) {
-      localStorage.removeItem('ymb_admin_token');
-      localStorage.removeItem('ymb_admin');
-      window.location.href = '/admin/login';
+    if (err.response?.status === 401) {
+      const path = window.location.pathname;
+      if (path.startsWith('/bmsadmin') && !path.includes('/login')) {
+        localStorage.removeItem('ymb_admin_token');
+        localStorage.removeItem('ymb_admin');
+        window.location.href = '/bmsadmin/login';
+      } else if (path.startsWith('/admin') && !path.includes('/login')) {
+        localStorage.removeItem('ymb_admin_token');
+        localStorage.removeItem('ymb_admin');
+        window.location.href = '/admin/login';
+      }
     }
     return Promise.reject(err);
   }

@@ -34,6 +34,7 @@ app.use('/api/contact', contactRouter);
 app.use('/api/tracking', trackingRouter);
 app.use('/api/schedules', schedulesRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/bms', require('./routes/bms'));
 
 app.get('/api/health', (req, res) => {
   res.json({

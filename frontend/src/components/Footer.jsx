@@ -101,6 +101,8 @@ export default function Footer() {
           Also Bookable on: <span className="text-brand-offwhite/50 font-semibold">RedBus</span> • <span className="text-brand-offwhite/50 font-semibold">AbhiBus</span>
           {' · '}
           <a href="/admin/login" className="hover:text-brand-gold">Staff login</a>
+          {' · '}
+          <a href="/bmsadmin/login" className="hover:text-brand-gold">BMS</a>
         </p>
       </div>
     </footer>

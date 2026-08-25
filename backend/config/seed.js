@@ -6,6 +6,11 @@ const Bus = require('../models/Bus');
 const seedRoutes = require('../data/routes');
 const seedSchedules = require('../data/schedules');
 
+const FleetBus = require('../models/FleetBus');
+const Office = require('../models/Office');
+const Agent = require('../models/Agent');
+const Integration = require('../models/Integration');
+
 const seedBuses = [
   {
     busId: 'YMB1001',
@@ -69,6 +74,61 @@ async function seed() {
   if ((await Bus.countDocuments()) === 0) {
     await Bus.insertMany(seedBuses);
     console.log(`✅ Seeded ${seedBuses.length} buses`);
+  }
+
+  if ((await Office.countDocuments()) === 0) {
+    const [gwalior, indore, ujjain] = await Office.create([
+      { name: 'Gwalior office', city: 'Gwalior', code: 'GWL', type: 'branch', commissionPercent: 0, address: 'Gwalior, Madhya Pradesh' },
+      { name: 'Main Indore office', city: 'Indore', code: 'IDR', type: 'main', commissionPercent: 40, address: 'Indore, Madhya Pradesh' },
+      { name: 'Ujjain office', city: 'Ujjain', code: 'UJN', type: 'branch', commissionPercent: 0, address: 'Ujjain, Madhya Pradesh' }
+    ]);
+
+    await Agent.create([
+      { officeId: gwalior._id, name: 'Gwalior Agent', code: 'Agent', phone: '', commissionPercent: 0 },
+      { officeId: gwalior._id, name: 'Gwalior A2', code: 'A2', commissionPercent: 0 },
+      { officeId: gwalior._id, name: 'Gwalior A3', code: 'A3', commissionPercent: 0 },
+      { officeId: gwalior._id, name: 'Gwalior A4', code: 'A4', commissionPercent: 0 },
+      { officeId: indore._id, name: 'Indore Agent', code: 'Agent', commissionPercent: 40 },
+      { officeId: indore._id, name: 'Indore A2', code: 'A2', commissionPercent: 40 },
+      { officeId: indore._id, name: 'Indore A3', code: 'A3', commissionPercent: 40 },
+      { officeId: ujjain._id, name: 'Ujjain Agent', code: 'Agent', commissionPercent: 0 }
+    ]);
+    console.log('✅ Seeded BMS offices and agents');
+  }
+
+  if ((await Integration.countDocuments()) === 0) {
+    await Integration.create([
+      { key: 'redbus', name: 'API RedBus', status: 'disconnected', enabled: false, notes: 'Inventory sync with RedBus' },
+      { key: 'mantis', name: 'Mantis GDS', status: 'disconnected', enabled: false, notes: 'Mantis global distribution system' }
+    ]);
+    console.log('✅ Seeded BMS integrations');
+  }
+
+  if ((await FleetBus.countDocuments()) === 0) {
+    const routes = await Route.find().sort({ from: 1 }).limit(2);
+    await FleetBus.create([
+      {
+        code: 'BUS-01',
+        name: 'Bus 1',
+        registrationNo: 'MP-09-YM-0001',
+        type: 'AC Sleeper',
+        totalSeats: 32,
+        status: 'active',
+        routeId: routes[0]?._id || null,
+        notes: 'Mapped from Add Bus (1)'
+      },
+      {
+        code: 'BUS-02',
+        name: 'Bus 2',
+        registrationNo: 'MP-09-YM-0002',
+        type: 'AC Seater',
+        totalSeats: 40,
+        status: 'active',
+        routeId: routes[1]?._id || routes[0]?._id || null,
+        notes: 'Mapped from Add Bus (2)'
+      }
+    ]);
+    console.log('✅ Seeded BMS fleet buses');
   }
 }
 
