@@ -258,12 +258,11 @@ router.get('/office-expenses', async (req, res) => {
   const date = String(req.query.date || '').trim();
   if (!date) return res.status(400).json({ success: false, error: 'date is required' });
   const row = await OfficeExpense.findOne({ date });
-  res.json({
-    success: true,
-    data: row
-      ? withOfficeTotals(row)
-      : { date, officeName: 'Office Kareha', items: [], total: 0 }
-  });
+  const data = row
+    ? withOfficeTotals(row)
+    : { date, officeName: 'Office Kharcha', items: [], total: 0 };
+  if (!data.officeName || data.officeName === 'Office Kareha') data.officeName = 'Office Kharcha';
+  res.json({ success: true, data });
 });
 
 router.put('/office-expenses', async (req, res) => {
@@ -276,15 +275,18 @@ router.put('/office-expenses', async (req, res) => {
         .map((item) => ({
           title: String(item.title || 'Other').trim() || 'Other',
           amount: money(item.amount),
-          note: String(item.note || '').trim(),
-          busCode: String(item.busCode || '').trim()
+          note: String(item.note || '').trim()
         }))
       : [];
+    const requestedName = String(req.body.officeName || '').trim();
+    const officeName = !requestedName || requestedName === 'Office Kareha'
+      ? 'Office Kharcha'
+      : requestedName;
     const row = await OfficeExpense.findOneAndUpdate(
       { date },
       {
         date,
-        officeName: String(req.body.officeName || 'Office Kareha').trim() || 'Office Kareha',
+        officeName,
         items
       },
       { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }

@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  BookOpen, NotebookPen, Bus, Route as RouteIcon, Building2, Users,
+  BookOpen, Bus, Route as RouteIcon, Building2, Users,
   Ticket, LogOut, Menu, X
 } from 'lucide-react';
 import api from '../../lib/api';
 
 const links = [
   { to: '/bmsadmin', label: 'Daily account', icon: BookOpen, end: true },
-  { to: '/bmsadmin/office-expenses', label: 'Office expenses', icon: NotebookPen },
   { to: '/bmsadmin/buses', label: 'Buses', icon: Bus },
   { to: '/bmsadmin/routes', label: 'Routes', icon: RouteIcon },
   { to: '/bmsadmin/offline', label: 'Offline', icon: Ticket },
@@ -52,7 +51,7 @@ export default function BmsLayout() {
       <aside className="hidden lg:flex w-64 shrink-0 bg-brand-charcoal text-brand-offwhite flex-col">
         <div className="px-5 py-5 border-b border-brand-gold/10">
           <div className="font-display font-bold text-sm">BMS Admin</div>
-          <div className="text-[10px] text-brand-gold/80 mt-0.5">Daily accounts · Office Kareha</div>
+          <div className="text-[10px] text-brand-gold/80 mt-0.5">Daily accounts · Office Kharcha</div>
           <div className="text-[10px] text-brand-offwhite/40 mt-1">{admin.email}</div>
         </div>
         <nav className="flex-1 p-3 space-y-1">

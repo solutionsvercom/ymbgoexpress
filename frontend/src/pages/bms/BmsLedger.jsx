@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Plus, Trash2, Save } from 'lucide-react';
 import api from '../../lib/api';
+import { OfficeKharchaSection } from './BmsOfficeExpenses.jsx';
 
 const RECEIPTS = [
   ['redbus', '1. Redbus booking'],
@@ -128,6 +129,10 @@ export default function BmsLedger() {
   const [saving, setSaving] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [officeTotal, setOfficeTotal] = useState(0);
+  const officeRef = useRef(null);
+
+  const onOfficeTotal = useCallback((value) => setOfficeTotal(value || 0), []);
 
   const load = async (selectedDate = date) => {
     setLoading(true);
@@ -171,8 +176,23 @@ export default function BmsLedger() {
     }
   };
 
+  const saveDay = async () => {
+    setSaving('day');
+    setMessage('');
+    setError('');
+    try {
+      await Promise.all(sheets.map((sheet) => api.put('/bms/ledgers', sheet)));
+      const officeOk = officeRef.current ? await officeRef.current.save() : true;
+      if (officeOk) setMessage('Full day saved — both buses and office Kharcha.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Could not save the full day.');
+    } finally {
+      setSaving('');
+    }
+  };
+
   const dayTotals = useMemo(() => {
-    return sheets.reduce(
+    const buses = sheets.reduce(
       (acc, sheet) => {
         const t = totals(sheet);
         acc.receiptTotal += t.receiptTotal;
@@ -182,7 +202,9 @@ export default function BmsLedger() {
       },
       { receiptTotal: 0, expenseTotal: 0, balance: 0 }
     );
-  }, [sheets]);
+    const net = buses.receiptTotal - buses.expenseTotal - officeTotal;
+    return { ...buses, officeTotal, net };
+  }, [sheets, officeTotal]);
 
   return (
     <div>
@@ -191,7 +213,7 @@ export default function BmsLedger() {
           <p className="text-[10px] font-bold uppercase tracking-wider text-brand-red mb-1">Daily register</p>
           <h1 className="font-display text-2xl font-bold">Bus account — Aavak / Kharcha</h1>
           <p className="text-sm text-brand-charcoal/50 mt-1">
-            Fill receipts and expenses for each bus separately, the same way as the notebook.
+            Fill each bus first, then office Kharcha below. Totals are per bus, then for the whole day.
           </p>
         </div>
         <label className="text-xs font-bold">
@@ -210,57 +232,80 @@ export default function BmsLedger() {
 
       {loading ? (
         <p className="text-sm text-brand-charcoal/45">Opening register...</p>
-      ) : sheets.length === 0 ? (
-        <p className="text-sm text-brand-charcoal/55">
-          No buses found. Add 7311 and 7312 from <a className="text-brand-red font-bold" href="/bmsadmin/buses">Buses</a>.
-        </p>
       ) : (
         <div className="space-y-8">
-          {sheets.map((sheet, index) => {
-            const t = totals(sheet);
-            return (
-              <NotebookSheet
-                key={sheet.busCode}
-                dateLabel={displayDate(date)}
-                sheet={sheet}
-                totals={t}
-                saving={saving === sheet.busCode}
-                onSave={() => saveSheet(sheet)}
-                onReceipt={(key, value) => updateSheet(index, (s) => ({ ...s, receipts: { ...s.receipts, [key]: value } }))}
-                onExpense={(key, value) => updateSheet(index, (s) => ({ ...s, expenses: { ...s.expenses, [key]: value } }))}
-                onOther={(oi, field, value) => updateSheet(index, (s) => ({
-                  ...s,
-                  expenses: {
-                    ...s.expenses,
-                    otherItems: s.expenses.otherItems.map((item, i) => (i === oi ? { ...item, [field]: value } : item))
-                  }
-                }))}
-                onAddOther={() => updateSheet(index, (s) => ({
-                  ...s,
-                  expenses: { ...s.expenses, otherItems: [...s.expenses.otherItems, { note: '', amount: '' }] }
-                }))}
-                onRemoveOther={(oi) => updateSheet(index, (s) => {
-                  const next = s.expenses.otherItems.filter((_, i) => i !== oi);
-                  return {
+          {sheets.length === 0 ? (
+            <p className="text-sm text-brand-charcoal/55">
+              No buses found. Add 7311 and 7312 from <a className="text-brand-red font-bold" href="/bmsadmin/buses">Buses</a>.
+            </p>
+          ) : (
+            sheets.map((sheet, index) => {
+              const t = totals(sheet);
+              return (
+                <NotebookSheet
+                  key={sheet.busCode}
+                  dateLabel={displayDate(date)}
+                  sheet={sheet}
+                  totals={t}
+                  saving={saving === sheet.busCode}
+                  onSave={() => saveSheet(sheet)}
+                  onReceipt={(key, value) => updateSheet(index, (s) => ({ ...s, receipts: { ...s.receipts, [key]: value } }))}
+                  onExpense={(key, value) => updateSheet(index, (s) => ({ ...s, expenses: { ...s.expenses, [key]: value } }))}
+                  onOther={(oi, field, value) => updateSheet(index, (s) => ({
                     ...s,
                     expenses: {
                       ...s.expenses,
-                      otherItems: next.length ? next : [{ note: '', amount: '' }]
+                      otherItems: s.expenses.otherItems.map((item, i) => (i === oi ? { ...item, [field]: value } : item))
                     }
-                  };
-                })}
-              />
-            );
-          })}
+                  }))}
+                  onAddOther={() => updateSheet(index, (s) => ({
+                    ...s,
+                    expenses: { ...s.expenses, otherItems: [...s.expenses.otherItems, { note: '', amount: '' }] }
+                  }))}
+                  onRemoveOther={(oi) => updateSheet(index, (s) => {
+                    const next = s.expenses.otherItems.filter((_, i) => i !== oi);
+                    return {
+                      ...s,
+                      expenses: {
+                        ...s.expenses,
+                        otherItems: next.length ? next : [{ note: '', amount: '' }]
+                      }
+                    };
+                  })}
+                />
+              );
+            })
+          )}
 
-          <div className="bg-brand-charcoal text-brand-offwhite rounded-2xl p-5 grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <SummaryStat label="All buses — receipts" value={inr(dayTotals.receiptTotal)} />
-            <SummaryStat label="All buses — expenses" value={inr(dayTotals.expenseTotal)} />
-            <SummaryStat
-              label="Day balance"
-              value={`${dayTotals.balance < 0 ? '−' : ''}${inr(Math.abs(dayTotals.balance))}`}
-              hint={dayTotals.balance >= 0 ? 'Bachat' : 'Loss'}
-            />
+          <OfficeKharchaSection
+            ref={officeRef}
+            date={date}
+            dateLabel={displayDate(date)}
+            onTotalChange={onOfficeTotal}
+            onMessage={setMessage}
+            onError={setError}
+          />
+
+          <div className="bg-brand-charcoal text-brand-offwhite rounded-2xl p-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <SummaryStat label="Both buses — receipts" value={inr(dayTotals.receiptTotal)} />
+              <SummaryStat label="Both buses — expenses" value={inr(dayTotals.expenseTotal)} />
+              <SummaryStat label="Office Kharcha" value={inr(dayTotals.officeTotal)} />
+              <SummaryStat
+                label="Day net"
+                value={`${dayTotals.net < 0 ? '−' : ''}${inr(Math.abs(dayTotals.net))}`}
+                hint={dayTotals.net >= 0 ? 'Bachat' : 'Loss'}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={saveDay}
+              disabled={saving === 'day'}
+              className="mt-5 w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-red text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-60"
+            >
+              <Save size={16} />
+              {saving === 'day' ? 'Saving day...' : 'Save full day'}
+            </button>
           </div>
         </div>
       )}
