@@ -27,5 +27,5 @@ Desktop.ini
 .idea/
 .vscode/
 
-# misc
-*.tsbuildinfo
+# bill book photos
+backend/uploads/

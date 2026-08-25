@@ -7,9 +7,14 @@ const OfflineBooking = require('../models/OfflineBooking');
 const Integration = require('../models/Integration');
 const Route = require('../models/Route');
 const Counter = require('../models/Counter');
+const path = require('path');
+const fs = require('fs');
 const TripLedger = require('../models/TripLedger');
 const OfficeExpense = require('../models/OfficeExpense');
+const BillPhoto = require('../models/BillPhoto');
 const { money, withLedgerTotals, withOfficeTotals } = require('../utils/ledgerMath');
+const { extractBill, visionConfigured } = require('../utils/billScan');
+const { uploadBill, billsDir } = require('../middleware/upload');
 
 const router = express.Router();
 router.use(auth);
@@ -322,6 +327,85 @@ router.put('/office-expenses', async (req, res) => {
   } catch (err) {
     res.status(400).json({ success: false, error: err.message || 'Could not save office expenses' });
   }
+});
+
+router.get('/bills', async (req, res) => {
+  const date = String(req.query.date || '').trim();
+  if (!date) return res.status(400).json({ success: false, error: 'date is required' });
+  const rows = await BillPhoto.find({ date }).sort({ createdAt: -1 });
+  res.json({
+    success: true,
+    data: {
+      visionReady: visionConfigured(),
+      bills: rows
+    }
+  });
+});
+
+router.get('/bills/file/:filename', async (req, res) => {
+  const filename = path.basename(String(req.params.filename || ''));
+  if (!/^[a-zA-Z0-9._-]+$/.test(filename)) {
+    return res.status(400).json({ success: false, error: 'Invalid file' });
+  }
+  const row = await BillPhoto.findOne({ filename });
+  if (!row) return res.status(404).json({ success: false, error: 'Photo not found' });
+  const filePath = path.join(billsDir, filename);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'Photo missing on disk' });
+  res.sendFile(filePath);
+});
+
+router.post('/bills/scan', (req, res) => {
+  uploadBill.single('image')(req, res, async (uploadErr) => {
+    if (uploadErr) {
+      return res.status(400).json({ success: false, error: uploadErr.message || 'Could not upload photo' });
+    }
+    if (!req.file) return res.status(400).json({ success: false, error: 'Please choose a bill book photo' });
+    const date = String(req.body.date || '').trim();
+    if (!date) return res.status(400).json({ success: false, error: 'date is required' });
+    try {
+      const buffer = fs.readFileSync(req.file.path);
+      let extracted = null;
+      let warning = '';
+      if (!visionConfigured()) {
+        warning = 'Photo saved. Add GEMINI_API_KEY in backend .env to auto-fill amounts from the bill book.';
+      } else {
+        try {
+          extracted = await extractBill(buffer, req.file.mimetype);
+        } catch (scanErr) {
+          warning = scanErr.message || 'Could not read this photo. You can still type the amounts.';
+        }
+      }
+      const row = await BillPhoto.create({
+        date,
+        filename: req.file.filename,
+        originalName: req.file.originalname || '',
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        kind: extracted?.kind || 'unknown',
+        extracted
+      });
+      res.json({
+        success: true,
+        data: {
+          bill: row,
+          extracted,
+          visionReady: visionConfigured(),
+          warning
+        }
+      });
+    } catch (err) {
+      res.status(400).json({ success: false, error: err.message || 'Could not read bill photo' });
+    }
+  });
+});
+
+router.delete('/bills/:id', async (req, res) => {
+  const row = await BillPhoto.findById(req.params.id).catch(() => null);
+  if (!row) return res.status(404).json({ success: false, error: 'Photo not found' });
+  const filePath = path.join(billsDir, row.filename);
+  fs.unlink(filePath, () => {});
+  await BillPhoto.findByIdAndDelete(row._id);
+  res.json({ success: true, message: 'Photo deleted' });
 });
 
 module.exports = router;

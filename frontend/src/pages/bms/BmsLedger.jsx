@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Plus, Trash2, Save } from 'lucide-react';
 import api from '../../lib/api';
 import { OfficeKharchaSection } from './BmsOfficeExpenses.jsx';
+import BillBookScanner from './BillBookScanner.jsx';
 
 const RECEIPTS = [
   ['redbus', '1. Redbus booking'],
@@ -96,6 +97,54 @@ function sheetFrom(bus, ledger, date) {
   };
 }
 
+function pickAmount(current, incoming) {
+  return money(incoming) ? String(incoming) : current;
+}
+
+function tripMatchesSheet(sheet, trip) {
+  const code = String(trip.busCode || '').replace(/\D/g, '');
+  if (code && code === String(sheet.busCode || '')) return true;
+  const sheetRoute = (sheet.routeLabel || '').toLowerCase();
+  const tripRoute = (trip.routeLabel || '').toLowerCase();
+  if (!sheetRoute || !tripRoute) return false;
+  if (!sheetRoute.includes('indore') || !sheetRoute.includes('gwalior') || !tripRoute.includes('indore') || !tripRoute.includes('gwalior')) {
+    return false;
+  }
+  const sheetFromIndore = sheetRoute.indexOf('indore') < sheetRoute.indexOf('gwalior');
+  const tripFromIndore = tripRoute.indexOf('indore') < tripRoute.indexOf('gwalior');
+  return sheetFromIndore === tripFromIndore;
+}
+
+function mergeTripIntoSheet(sheet, trip) {
+  if (!trip) return sheet;
+  const otherExisting = (sheet.expenses.otherItems || []).filter((item) => item.note || item.amount);
+  const incomingOthers = (trip.expenses?.otherItems || []).map((item) => ({
+    note: item.note || '',
+    amount: item.amount ? String(item.amount) : ''
+  }));
+  const mergedOthers = [...otherExisting];
+  incomingOthers.forEach((item) => {
+    const duplicate = mergedOthers.some((row) => row.note === item.note && row.amount === item.amount);
+    if (!duplicate && (item.note || item.amount)) mergedOthers.push(item);
+  });
+  return {
+    ...sheet,
+    receipts: {
+      redbus: pickAmount(sheet.receipts.redbus, trip.receipts?.redbus),
+      mentis: pickAmount(sheet.receipts.mentis, trip.receipts?.mentis),
+      indoreOffice: pickAmount(sheet.receipts.indoreOffice, trip.receipts?.indoreOffice),
+      ujjainOffice: pickAmount(sheet.receipts.ujjainOffice, trip.receipts?.ujjainOffice),
+      luggageOffice: pickAmount(sheet.receipts.luggageOffice, trip.receipts?.luggageOffice)
+    },
+    expenses: {
+      diesel: pickAmount(sheet.expenses.diesel, trip.expenses?.diesel),
+      tollBooth: pickAmount(sheet.expenses.tollBooth, trip.expenses?.tollBooth),
+      urea: pickAmount(sheet.expenses.urea, trip.expenses?.urea),
+      otherItems: mergedOthers.length ? mergedOthers : [{ note: '', amount: '' }]
+    }
+  };
+}
+
 function totals(sheet) {
   const receiptTotal = RECEIPTS.reduce((sum, [key]) => sum + money(sheet.receipts[key]), 0);
   const otherTotal = (sheet.expenses.otherItems || []).reduce((sum, item) => sum + money(item.amount), 0);
@@ -133,6 +182,17 @@ export default function BmsLedger() {
   const officeRef = useRef(null);
 
   const onOfficeTotal = useCallback((value) => setOfficeTotal(value || 0), []);
+
+  const applyExtracted = useCallback((extracted) => {
+    if (!extracted) return;
+    setSheets((prev) => prev.map((sheet) => {
+      const trip = (extracted.trips || []).find((row) => tripMatchesSheet(sheet, row));
+      return mergeTripIntoSheet(sheet, trip);
+    }));
+    if (extracted.office?.items?.length) {
+      officeRef.current?.applyItems(extracted.office.items);
+    }
+  }, []);
 
   const load = async (selectedDate = date) => {
     setLoading(true);
@@ -213,7 +273,7 @@ export default function BmsLedger() {
           <p className="text-[10px] font-bold uppercase tracking-wider text-brand-red mb-1">Daily register</p>
           <h1 className="font-display text-2xl font-bold">Bus account — Aavak / Kharcha</h1>
           <p className="text-sm text-brand-charcoal/50 mt-1">
-            Fill each bus first, then office Kharcha below. Totals are per bus, then for the whole day.
+            Fill each bus first, then office Kharcha below. Or upload a bill book photo to fill amounts automatically.
           </p>
         </div>
         <label className="text-xs font-bold">
@@ -234,6 +294,12 @@ export default function BmsLedger() {
         <p className="text-sm text-brand-charcoal/45">Opening register...</p>
       ) : (
         <div className="space-y-8">
+          <BillBookScanner
+            date={date}
+            onExtracted={applyExtracted}
+            onMessage={setMessage}
+            onError={setError}
+          />
           {sheets.length === 0 ? (
             <p className="text-sm text-brand-charcoal/55">
               No buses found. Add 7311 and 7312 from <a className="text-brand-red font-bold" href="/bmsadmin/buses">Buses</a>.

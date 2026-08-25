@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Plus, Trash2, Save } from 'lucide-react';
 import api from '../../lib/api';
@@ -42,6 +42,7 @@ export const OfficeKharchaSection = forwardRef(function OfficeKharchaSection(
   const [items, setItems] = useState([emptyItem(), emptyItem(), emptyItem()]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const appliedRef = useRef(false);
 
   const total = useMemo(
     () => items.reduce((sum, item) => sum + money(item.amount), 0),
@@ -56,6 +57,7 @@ export const OfficeKharchaSection = forwardRef(function OfficeKharchaSection(
     setLoading(true);
     try {
       const { data: exp } = await api.get('/bms/office-expenses', { params: { date: selectedDate } });
+      if (appliedRef.current) return;
       const row = exp.data || {};
       setOfficeName(officeTitle(row.officeName));
       const next = (row.items || []).map((item) => ({
@@ -72,6 +74,7 @@ export const OfficeKharchaSection = forwardRef(function OfficeKharchaSection(
   };
 
   useEffect(() => {
+    appliedRef.current = false;
     load(date).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
@@ -94,7 +97,23 @@ export const OfficeKharchaSection = forwardRef(function OfficeKharchaSection(
     }
   };
 
-  useImperativeHandle(ref, () => ({ save }), [date, officeName, items]);
+  useImperativeHandle(ref, () => ({
+    save,
+    applyItems: (incoming) => {
+      if (!Array.isArray(incoming) || !incoming.length) return;
+      appliedRef.current = true;
+      setItems((prev) => {
+        const existing = prev.filter((item) => item.title || item.amount || item.note);
+        const mapped = incoming.map((item) => ({
+          title: item.title || 'Other',
+          amount: item.amount ? String(item.amount) : '',
+          note: item.note || ''
+        }));
+        const next = [...existing, ...mapped];
+        return next.length ? next : [emptyItem()];
+      });
+    }
+  }), [date, officeName, items]);
 
   if (loading) {
     return <p className="text-sm text-brand-charcoal/45">Opening office Kharcha...</p>;
