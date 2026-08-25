@@ -14,8 +14,7 @@ const badges = [
 ];
 
 const routeTags = [
-  'Indore ↔ Gwalior', 'Indore ↔ Morena', 'Indore ↔ Agra',
-  'Indore ↔ Bhopal', 'Indore ↔ Guna', 'Gwalior ↔ Bhopal',
+  'Indore → Gwalior', 'Gwalior → Indore',
 ];
 
 export default function HeroSection() {

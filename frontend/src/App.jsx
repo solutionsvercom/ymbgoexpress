@@ -11,13 +11,13 @@ import SchedulesPage from './pages/admin/SchedulesPage.jsx';
 import TrackingPage from './pages/admin/TrackingPage.jsx';
 import BmsLogin from './pages/bms/BmsLogin.jsx';
 import BmsLayout from './pages/bms/BmsLayout.jsx';
-import BmsDashboard from './pages/bms/BmsDashboard.jsx';
+import BmsLedger from './pages/bms/BmsLedger.jsx';
+import BmsOfficeExpenses from './pages/bms/BmsOfficeExpenses.jsx';
 import BmsBuses from './pages/bms/BmsBuses.jsx';
 import BmsRoutes from './pages/bms/BmsRoutes.jsx';
 import BmsOffline from './pages/bms/BmsOffline.jsx';
 import BmsOffices from './pages/bms/BmsOffices.jsx';
 import BmsAgents from './pages/bms/BmsAgents.jsx';
-import BmsIntegrations from './pages/bms/BmsIntegrations.jsx';
 
 export default function App() {
   return (
@@ -35,13 +35,13 @@ export default function App() {
         </Route>
         <Route path="/bmsadmin/login" element={<BmsLogin />} />
         <Route path="/bmsadmin" element={<BmsLayout />}>
-          <Route index element={<BmsDashboard />} />
+          <Route index element={<BmsLedger />} />
+          <Route path="office-expenses" element={<BmsOfficeExpenses />} />
           <Route path="buses" element={<BmsBuses />} />
           <Route path="routes" element={<BmsRoutes />} />
           <Route path="offline" element={<BmsOffline />} />
           <Route path="offices" element={<BmsOffices />} />
           <Route path="agents" element={<BmsAgents />} />
-          <Route path="integrations" element={<BmsIntegrations />} />
         </Route>
       </Routes>
     </BrowserRouter>

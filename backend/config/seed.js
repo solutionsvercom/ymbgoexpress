@@ -66,6 +66,24 @@ async function seed() {
     console.log(`✅ Seeded ${seedRoutes.length} routes`);
   }
 
+  await Route.updateMany(
+    {
+      $nor: [
+        { from: /^Indore$/i, to: /^Gwalior$/i },
+        { from: /^Gwalior$/i, to: /^Indore$/i }
+      ]
+    },
+    { $set: { active: false } }
+  );
+  for (const route of seedRoutes) {
+    await Route.findOneAndUpdate(
+      { from: new RegExp(`^${route.from}$`, 'i'), to: new RegExp(`^${route.to}$`, 'i') },
+      { $set: { ...route, active: true } },
+      { upsert: true }
+    );
+  }
+  console.log('✅ Routes limited to Indore ↔ Gwalior');
+
   if ((await Schedule.countDocuments()) === 0) {
     await Schedule.insertMany(seedSchedules);
     console.log(`✅ Seeded ${seedSchedules.length} schedules`);
@@ -104,32 +122,58 @@ async function seed() {
     console.log('✅ Seeded BMS integrations');
   }
 
-  if ((await FleetBus.countDocuments()) === 0) {
-    const routes = await Route.find().sort({ from: 1 }).limit(2);
-    await FleetBus.create([
-      {
-        code: 'BUS-01',
-        name: 'Bus 1',
-        registrationNo: 'MP-09-YM-0001',
-        type: 'AC Sleeper',
-        totalSeats: 32,
-        status: 'active',
-        routeId: routes[0]?._id || null,
-        notes: 'Mapped from Add Bus (1)'
-      },
-      {
-        code: 'BUS-02',
-        name: 'Bus 2',
-        registrationNo: 'MP-09-YM-0002',
-        type: 'AC Seater',
-        totalSeats: 40,
-        status: 'active',
-        routeId: routes[1]?._id || routes[0]?._id || null,
-        notes: 'Mapped from Add Bus (2)'
-      }
-    ]);
-    console.log('✅ Seeded BMS fleet buses');
+  const indoreToGwalior = await Route.findOne({ from: /^Indore$/i, to: /^Gwalior$/i });
+  const gwaliorToIndore = await Route.findOne({ from: /^Gwalior$/i, to: /^Indore$/i });
+  const ledgerBuses = [
+    {
+      code: '7311',
+      oldCode: 'BUS-01',
+      name: 'Indore To Gwalior',
+      registrationNo: 'MP-09-YM-7311',
+      type: 'AC Seater',
+      totalSeats: 32,
+      status: 'active',
+      routeId: indoreToGwalior?._id || null,
+      notes: 'Daily ledger bus — Indore to Gwalior'
+    },
+    {
+      code: '7312',
+      oldCode: 'BUS-02',
+      name: 'Gwalior To Indore',
+      registrationNo: 'MP-09-YM-7312',
+      type: 'AC Seater',
+      totalSeats: 32,
+      status: 'active',
+      routeId: gwaliorToIndore?._id || null,
+      notes: 'Daily ledger bus — Gwalior to Indore'
+    }
+  ];
+
+  for (const spec of ledgerBuses) {
+    const existing =
+      (await FleetBus.findOne({ code: spec.code })) ||
+      (await FleetBus.findOne({ code: spec.oldCode }));
+    const payload = {
+      code: spec.code,
+      name: spec.name,
+      registrationNo: spec.registrationNo,
+      type: spec.type,
+      totalSeats: spec.totalSeats,
+      status: spec.status,
+      routeId: spec.routeId,
+      notes: spec.notes
+    };
+    if (existing) {
+      await FleetBus.findByIdAndUpdate(existing._id, payload);
+    } else {
+      await FleetBus.create(payload);
+    }
   }
+  console.log('✅ Fleet buses ready: 7311 (Indore → Gwalior), 7312 (Gwalior → Indore)');
+  await FleetBus.updateMany(
+    { code: { $in: ['BUS-01', 'BUS-02', 'BUS7311', 'BUS7312'] } },
+    { $set: { status: 'inactive' } }
+  );
 }
 
 module.exports = seed;

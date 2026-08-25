@@ -32,7 +32,7 @@ export default function BmsLogin() {
         <div className="text-center mb-8">
           <img src="/images/ymbgo_logo.png" alt="YMB GoExpress" className="h-14 mx-auto mb-4" />
           <h1 className="font-display text-2xl font-bold text-brand-offwhite">BMS Admin</h1>
-          <p className="text-brand-offwhite/50 text-sm mt-1">Bus Management System — fleet, branches and agents</p>
+          <p className="text-brand-offwhite/50 text-sm mt-1">Daily bus accounts, office expenses and fleet</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

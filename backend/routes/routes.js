@@ -6,7 +6,13 @@ const router = express.Router();
 
 router.get('/', async (req, res) => {
   const { from, to } = req.query;
-  const filter = { active: true };
+  const filter = {
+    active: true,
+    $or: [
+      { from: /^Indore$/i, to: /^Gwalior$/i },
+      { from: /^Gwalior$/i, to: /^Indore$/i }
+    ]
+  };
   if (from) filter.from = new RegExp(`^${from}$`, 'i');
   if (to) filter.to = new RegExp(`^${to}$`, 'i');
   const routes = await Route.find(filter).sort({ from: 1, to: 1 });
@@ -14,7 +20,13 @@ router.get('/', async (req, res) => {
 });
 
 router.get('/all', auth, async (req, res) => {
-  const routes = await Route.find().sort({ createdAt: -1 });
+  const routes = await Route.find({
+    active: true,
+    $or: [
+      { from: /^Indore$/i, to: /^Gwalior$/i },
+      { from: /^Gwalior$/i, to: /^Indore$/i }
+    ]
+  }).sort({ from: 1, to: 1 });
   res.json({ success: true, data: routes });
 });
 

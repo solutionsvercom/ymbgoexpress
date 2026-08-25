@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const locations = ['Indore', 'Dewas', 'Ujjain', 'Bhopal', 'Gwalior', 'Morena', 'Shivpuri', 'Datia'];
+const locations = ['Indore', 'Gwalior'];
 
 export default function SearchWidget() {
   const [tab, setTab] = useState('one-way');

@@ -7,6 +7,9 @@ const OfflineBooking = require('../models/OfflineBooking');
 const Integration = require('../models/Integration');
 const Route = require('../models/Route');
 const Counter = require('../models/Counter');
+const TripLedger = require('../models/TripLedger');
+const OfficeExpense = require('../models/OfficeExpense');
+const { money, withLedgerTotals, withOfficeTotals } = require('../utils/ledgerMath');
 
 const router = express.Router();
 router.use(auth);
@@ -178,6 +181,118 @@ router.patch('/integrations/:id', async (req, res) => {
   const row = await Integration.findByIdAndUpdate(req.params.id, updates, { new: true }).catch(() => null);
   if (!row) return res.status(404).json({ success: false, error: 'Integration not found' });
   res.json({ success: true, data: row });
+});
+
+function normalizeReceipts(input = {}) {
+  return {
+    redbus: money(input.redbus),
+    mentis: money(input.mentis),
+    indoreOffice: money(input.indoreOffice),
+    ujjainOffice: money(input.ujjainOffice),
+    luggageOffice: money(input.luggageOffice)
+  };
+}
+
+function normalizeExpenses(input = {}) {
+  const otherItems = Array.isArray(input.otherItems)
+    ? input.otherItems
+      .map((item) => ({
+        note: String(item.note || '').trim(),
+        amount: money(item.amount)
+      }))
+      .filter((item) => item.note || item.amount)
+    : [];
+  return {
+    diesel: money(input.diesel),
+    tollBooth: money(input.tollBooth),
+    urea: money(input.urea),
+    otherItems
+  };
+}
+
+router.get('/ledgers', async (req, res) => {
+  const date = String(req.query.date || '').trim();
+  if (!date) return res.status(400).json({ success: false, error: 'date is required' });
+  const [buses, ledgers] = await Promise.all([
+    FleetBus.find({ status: { $ne: 'inactive' } }).populate('routeId', 'from to type').sort({ code: 1 }),
+    TripLedger.find({ date }).sort({ busCode: 1 })
+  ]);
+  res.json({
+    success: true,
+    data: {
+      date,
+      buses,
+      ledgers: ledgers.map(withLedgerTotals)
+    }
+  });
+});
+
+router.put('/ledgers', async (req, res) => {
+  try {
+    const date = String(req.body.date || '').trim();
+    const busCode = String(req.body.busCode || '').trim();
+    if (!date || !busCode) {
+      return res.status(400).json({ success: false, error: 'date and busCode are required' });
+    }
+    const payload = {
+      date,
+      busCode,
+      busName: String(req.body.busName || '').trim(),
+      routeLabel: String(req.body.routeLabel || '').trim(),
+      fleetBusId: req.body.fleetBusId || null,
+      receipts: normalizeReceipts(req.body.receipts),
+      expenses: normalizeExpenses(req.body.expenses)
+    };
+    const row = await TripLedger.findOneAndUpdate(
+      { date, busCode },
+      payload,
+      { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
+    );
+    res.json({ success: true, data: withLedgerTotals(row) });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'Could not save ledger' });
+  }
+});
+
+router.get('/office-expenses', async (req, res) => {
+  const date = String(req.query.date || '').trim();
+  if (!date) return res.status(400).json({ success: false, error: 'date is required' });
+  const row = await OfficeExpense.findOne({ date });
+  res.json({
+    success: true,
+    data: row
+      ? withOfficeTotals(row)
+      : { date, officeName: 'Office Kareha', items: [], total: 0 }
+  });
+});
+
+router.put('/office-expenses', async (req, res) => {
+  try {
+    const date = String(req.body.date || '').trim();
+    if (!date) return res.status(400).json({ success: false, error: 'date is required' });
+    const items = Array.isArray(req.body.items)
+      ? req.body.items
+        .filter((item) => money(item.amount) || String(item.note || '').trim() || String(item.title || '').trim())
+        .map((item) => ({
+          title: String(item.title || 'Other').trim() || 'Other',
+          amount: money(item.amount),
+          note: String(item.note || '').trim(),
+          busCode: String(item.busCode || '').trim()
+        }))
+      : [];
+    const row = await OfficeExpense.findOneAndUpdate(
+      { date },
+      {
+        date,
+        officeName: String(req.body.officeName || 'Office Kareha').trim() || 'Office Kareha',
+        items
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
+    );
+    res.json({ success: true, data: withOfficeTotals(row) });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'Could not save office expenses' });
+  }
 });
 
 module.exports = router;
