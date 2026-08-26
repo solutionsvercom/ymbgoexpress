@@ -15,7 +15,7 @@ const BillPhoto = require('../models/BillPhoto');
 const { money, withLedgerTotals, withOfficeTotals } = require('../utils/ledgerMath');
 const { extractBill, visionConfigured } = require('../utils/billScan');
 const { uploadBill, billsDir } = require('../middleware/upload');
-const { resolveDuties, saveDuties } = require('../utils/routeDuties');
+const { coreRoutes, resolveDuties, saveDuties } = require('../utils/routeDuties');
 
 const router = express.Router();
 router.use(auth);
@@ -79,11 +79,28 @@ router.delete('/buses/:id', async (req, res) => {
 router.get('/route-duties', async (req, res) => {
   const date = String(req.query.date || '').trim();
   if (!date) return res.status(400).json({ success: false, error: 'date is required' });
-  const [duties, buses] = await Promise.all([
+  const [duties, buses, routes] = await Promise.all([
     resolveDuties(date),
-    FleetBus.find({ status: { $ne: 'inactive' } }).select('code name status').sort({ code: 1 })
+    FleetBus.find({ status: { $ne: 'inactive' } }).select('code name status').sort({ code: 1 }),
+    coreRoutes()
   ]);
-  res.json({ success: true, data: { date, duties, buses } });
+  res.json({
+    success: true,
+    data: {
+      date,
+      duties,
+      buses,
+      routes: routes.map((route) => ({
+        _id: route._id,
+        from: route.from,
+        to: route.to,
+        type: route.type,
+        departure: route.departure,
+        price: route.price,
+        routeLabel: `${route.from} To ${route.to}`
+      }))
+    }
+  });
 });
 
 router.put('/route-duties', async (req, res) => {
@@ -269,7 +286,7 @@ router.get('/ledgers', async (req, res) => {
   if (!date) return res.status(400).json({ success: false, error: 'date is required' });
   const [duties, ledgers] = await Promise.all([
     resolveDuties(date),
-    TripLedger.find({ date }).sort({ busCode: 1 })
+    TripLedger.find({ date }).sort({ busCode: 1, routeLabel: 1 })
   ]);
   const buses = duties
     .filter((duty) => duty.busCode)
@@ -277,7 +294,8 @@ router.get('/ledgers', async (req, res) => {
       _id: duty.fleetBusId,
       code: duty.busCode,
       name: duty.busName || duty.routeLabel,
-      routeId: { from: duty.from, to: duty.to, type: duty.type },
+      routeId: { _id: duty.routeId, from: duty.from, to: duty.to, type: duty.type },
+      routeLabel: duty.routeLabel,
       dutyFrom: duty.effectiveFrom
     }));
   res.json({
@@ -295,20 +313,24 @@ router.put('/ledgers', async (req, res) => {
   try {
     const date = String(req.body.date || '').trim();
     const busCode = String(req.body.busCode || '').trim();
-    if (!date || !busCode) {
-      return res.status(400).json({ success: false, error: 'date and busCode are required' });
+    const routeLabel = String(req.body.routeLabel || '').trim();
+    if (!date || !busCode || !routeLabel) {
+      return res.status(400).json({ success: false, error: 'date, busCode and routeLabel are required' });
     }
     const payload = {
       date,
       busCode,
       busName: String(req.body.busName || '').trim(),
-      routeLabel: String(req.body.routeLabel || '').trim(),
+      routeId: req.body.routeId && typeof req.body.routeId === 'object'
+        ? (req.body.routeId._id || null)
+        : (req.body.routeId || null),
+      routeLabel,
       fleetBusId: req.body.fleetBusId || null,
       receipts: normalizeReceipts(req.body.receipts),
       expenses: normalizeExpenses(req.body.expenses)
     };
     const row = await TripLedger.findOneAndUpdate(
-      { date, busCode },
+      { date, busCode, routeLabel },
       payload,
       { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
     );

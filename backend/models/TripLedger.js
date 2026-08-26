@@ -13,6 +13,7 @@ const tripLedgerSchema = new mongoose.Schema(
     date: { type: String, required: true, trim: true },
     busCode: { type: String, required: true, trim: true },
     busName: { type: String, default: '', trim: true },
+    routeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Route', default: null },
     routeLabel: { type: String, default: '', trim: true },
     fleetBusId: { type: mongoose.Schema.Types.ObjectId, ref: 'FleetBus', default: null },
     receipts: {
@@ -32,6 +33,6 @@ const tripLedgerSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-tripLedgerSchema.index({ date: 1, busCode: 1 }, { unique: true });
+tripLedgerSchema.index({ date: 1, busCode: 1, routeLabel: 1 }, { unique: true });
 
 module.exports = mongoose.model('TripLedger', tripLedgerSchema);

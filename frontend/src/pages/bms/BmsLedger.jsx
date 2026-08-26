@@ -44,6 +44,7 @@ function blank(value) {
 }
 
 function routeLabelFor(bus) {
+  if (bus.routeLabel) return bus.routeLabel;
   if (bus.routeId?.from && bus.routeId?.to) return `${bus.routeId.from} To ${bus.routeId.to}`;
   return bus.name || '';
 }
@@ -53,6 +54,7 @@ function emptySheet(bus, date) {
     date,
     busCode: bus.code,
     busName: bus.name || '',
+    routeId: bus.routeId?._id || bus.routeId || null,
     routeLabel: routeLabelFor(bus),
     fleetBusId: bus._id,
     receipts: {
@@ -101,18 +103,23 @@ function pickAmount(current, incoming) {
   return money(incoming) ? String(incoming) : current;
 }
 
+function sheetKey(sheet) {
+  return `${sheet.busCode}::${sheet.routeLabel}`;
+}
+
 function tripMatchesSheet(sheet, trip) {
   const code = String(trip.busCode || '').replace(/\D/g, '');
-  if (code && code === String(sheet.busCode || '')) return true;
+  const sheetCode = String(sheet.busCode || '').replace(/\D/g, '');
+  const busOk = !code || code === sheetCode;
   const sheetRoute = (sheet.routeLabel || '').toLowerCase();
   const tripRoute = (trip.routeLabel || '').toLowerCase();
-  if (!sheetRoute || !tripRoute) return false;
+  if (!sheetRoute || !tripRoute) return busOk && !tripRoute;
   if (!sheetRoute.includes('indore') || !sheetRoute.includes('gwalior') || !tripRoute.includes('indore') || !tripRoute.includes('gwalior')) {
-    return false;
+    return busOk && sheetRoute === tripRoute;
   }
   const sheetFromIndore = sheetRoute.indexOf('indore') < sheetRoute.indexOf('gwalior');
   const tripFromIndore = tripRoute.indexOf('indore') < tripRoute.indexOf('gwalior');
-  return sheetFromIndore === tripFromIndore;
+  return busOk && sheetFromIndore === tripFromIndore;
 }
 
 function mergeTripIntoSheet(sheet, trip) {
@@ -204,7 +211,13 @@ export default function BmsLedger() {
       const ledgers = data.data?.ledgers || [];
       setDutyFrom(buses.find((bus) => bus.dutyFrom)?.dutyFrom || '');
       setSheets(buses.map((bus) => {
-        const match = ledgers.find((row) => row.busCode === bus.code);
+        const label = routeLabelFor(bus);
+        const match = ledgers.find((row) => (
+          row.busCode === bus.code && (
+            row.routeLabel === label
+            || String(row.routeId || '') === String(bus.routeId?._id || bus.routeId || '')
+          )
+        )) || ledgers.find((row) => row.busCode === bus.code && !row.routeLabel);
         return sheetFrom(bus, match, selectedDate);
       }));
     } catch (err) {
@@ -225,12 +238,12 @@ export default function BmsLedger() {
   };
 
   const saveSheet = async (sheet) => {
-    setSaving(sheet.busCode);
+    setSaving(sheetKey(sheet));
     setMessage('');
     setError('');
     try {
       await api.put('/bms/ledgers', sheet);
-      setMessage(`Saved bus ${sheet.busCode}`);
+      setMessage(`Saved bus ${sheet.busCode} · ${sheet.routeLabel}`);
     } catch (err) {
       setError(err.response?.data?.error || `Could not save bus ${sheet.busCode}.`);
     } finally {
@@ -275,7 +288,7 @@ export default function BmsLedger() {
           <p className="text-[10px] font-bold uppercase tracking-wider text-brand-red mb-1">Daily register</p>
           <h1 className="font-display text-2xl font-bold">Bus account — Aavak / Kharcha</h1>
           <p className="text-sm text-brand-charcoal/50 mt-1">
-            First set bus numbers on Routes. This date shows those buses until you save a new selection that starts on an earlier or same date.
+            First set buses and both Gwalior ↔ Indore routes on Routes. This date shows those trips until you save a new selection that starts on an earlier or same date.
           </p>
         </div>
         <label className="text-xs font-bold">
@@ -316,13 +329,14 @@ export default function BmsLedger() {
           ) : (
             sheets.map((sheet, index) => {
               const t = totals(sheet);
+              const key = sheetKey(sheet);
               return (
                 <NotebookSheet
-                  key={sheet.busCode}
+                  key={key}
                   dateLabel={displayDate(date)}
                   sheet={sheet}
                   totals={t}
-                  saving={saving === sheet.busCode}
+                  saving={saving === key}
                   onSave={() => saveSheet(sheet)}
                   onReceipt={(key, value) => updateSheet(index, (s) => ({ ...s, receipts: { ...s.receipts, [key]: value } }))}
                   onExpense={(key, value) => updateSheet(index, (s) => ({ ...s, expenses: { ...s.expenses, [key]: value } }))}
@@ -490,7 +504,7 @@ function NotebookSheet({
           className="inline-flex items-center justify-center gap-2 bg-brand-red text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-60"
         >
           <Save size={16} />
-          {saving ? 'Saving...' : `Save bus ${sheet.busCode}`}
+          {saving ? 'Saving...' : `Save ${sheet.busCode}`}
         </button>
       </footer>
     </section>

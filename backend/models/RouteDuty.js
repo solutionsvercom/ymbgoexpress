@@ -7,11 +7,12 @@ const routeDutySchema = new mongoose.Schema(
     routeLabel: { type: String, default: '', trim: true },
     fleetBusId: { type: mongoose.Schema.Types.ObjectId, ref: 'FleetBus', default: null },
     busCode: { type: String, default: '', trim: true },
-    busName: { type: String, default: '', trim: true }
+    busName: { type: String, default: '', trim: true },
+    active: { type: Boolean, default: true }
   },
   { timestamps: true }
 );
 
-routeDutySchema.index({ routeId: 1, effectiveFrom: 1 }, { unique: true });
+routeDutySchema.index({ fleetBusId: 1, routeId: 1, effectiveFrom: 1 }, { unique: true });
 
 module.exports = mongoose.model('RouteDuty', routeDutySchema);

@@ -7,7 +7,8 @@ const seedRoutes = require('../data/routes');
 const seedSchedules = require('../data/schedules');
 
 const FleetBus = require('../models/FleetBus');
-const { seedDefaultDuties } = require('../utils/routeDuties');
+const { seedDefaultDuties, syncDutyIndexes } = require('../utils/routeDuties');
+const TripLedger = require('../models/TripLedger');
 const Office = require('../models/Office');
 const Agent = require('../models/Agent');
 const Integration = require('../models/Integration');
@@ -97,6 +98,9 @@ async function seed() {
 
   await Agent.collection.dropIndex('officeId_1_code_1').catch(() => {});
   await Agent.syncIndexes().catch(() => {});
+  await syncDutyIndexes();
+  await TripLedger.collection.dropIndex('date_1_busCode_1').catch(() => {});
+  await TripLedger.syncIndexes().catch(() => {});
 
   if ((await Office.countDocuments()) === 0) {
     const [gwalior, indore, ujjain] = await Office.create([
@@ -132,24 +136,24 @@ async function seed() {
     {
       code: '7311',
       oldCode: 'BUS-01',
-      name: 'Indore To Gwalior',
+      name: 'Gwalior ↔ Indore',
       registrationNo: 'MP-09-YM-7311',
       type: 'AC Seater',
       totalSeats: 32,
       status: 'active',
       routeId: indoreToGwalior?._id || null,
-      notes: 'Daily ledger bus — Indore to Gwalior'
+      notes: 'Daily ledger bus — Gwalior ↔ Indore'
     },
     {
       code: '7312',
       oldCode: 'BUS-02',
-      name: 'Gwalior To Indore',
+      name: 'Gwalior ↔ Indore',
       registrationNo: 'MP-09-YM-7312',
       type: 'AC Seater',
       totalSeats: 32,
       status: 'active',
       routeId: gwaliorToIndore?._id || null,
-      notes: 'Daily ledger bus — Gwalior to Indore'
+      notes: 'Daily ledger bus — Gwalior ↔ Indore'
     }
   ];
 
@@ -173,7 +177,7 @@ async function seed() {
       await FleetBus.create(payload);
     }
   }
-  console.log('✅ Fleet buses ready: 7311 (Indore → Gwalior), 7312 (Gwalior → Indore)');
+  console.log('✅ Fleet buses ready: 7311 and 7312 (both Gwalior ↔ Indore)');
   await FleetBus.updateMany(
     { code: { $in: ['BUS-01', 'BUS-02', 'BUS7311', 'BUS7312'] } },
     { $set: { status: 'inactive' } }

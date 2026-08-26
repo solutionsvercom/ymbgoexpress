@@ -15,22 +15,25 @@ function displayDate(iso) {
   return `${d}/${m}/${y}`;
 }
 
-function oppositeBusId(selectedId, buses) {
-  if (!selectedId) return '';
-  const other = buses.find((bus) => String(bus._id) !== String(selectedId));
-  return other ? String(other._id) : '';
-}
-
-function busLabel(buses, id) {
-  const bus = buses.find((item) => String(item._id) === String(id));
-  if (!bus) return '';
-  return `${bus.code}${bus.name ? ` · ${bus.name}` : ''}`;
+function emptyPicks(buses, routes, duties) {
+  const next = {};
+  buses.forEach((bus) => {
+    next[bus._id] = {};
+    routes.forEach((route) => {
+      const assigned = duties.some(
+        (duty) => String(duty.fleetBusId) === String(bus._id) && String(duty.routeId) === String(route._id)
+      );
+      next[bus._id][route._id] = duties.length ? assigned : true;
+    });
+  });
+  return next;
 }
 
 export default function BmsRoutes() {
   const [date, setDate] = useState(todayISO());
-  const [duties, setDuties] = useState([]);
+  const [routes, setRoutes] = useState([]);
   const [buses, setBuses] = useState([]);
+  const [duties, setDuties] = useState([]);
   const [picks, setPicks] = useState({});
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -41,24 +44,27 @@ export default function BmsRoutes() {
     const { data } = await api.get('/bms/route-duties', { params: { date: selectedDate } });
     const nextDuties = data.data?.duties || [];
     const nextBuses = data.data?.buses || [];
+    const nextRoutes = data.data?.routes || [];
     setDuties(nextDuties);
     setBuses(nextBuses);
-    const nextPicks = {};
-    nextDuties.forEach((duty, index) => {
-      if (index === 0) {
-        nextPicks[duty.routeId] = duty.fleetBusId ? String(duty.fleetBusId) : '';
-      }
-    });
-    if (nextDuties[0] && nextDuties[1]) {
-      nextPicks[nextDuties[1].routeId] = oppositeBusId(nextPicks[nextDuties[0].routeId], nextBuses);
-    }
-    setPicks(nextPicks);
+    setRoutes(nextRoutes);
+    setPicks(emptyPicks(nextBuses, nextRoutes, nextDuties));
   };
 
   useEffect(() => {
     load(date).catch(() => setError('Could not load routes.'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date]);
+
+  const toggleRoute = (busId, routeId) => {
+    setPicks((prev) => ({
+      ...prev,
+      [busId]: {
+        ...(prev[busId] || {}),
+        [routeId]: !prev[busId]?.[routeId]
+      }
+    }));
+  };
 
   const save = async () => {
     setSaving(true);
@@ -67,15 +73,13 @@ export default function BmsRoutes() {
     try {
       await api.put('/bms/route-duties', {
         date,
-        assignments: duties.map((duty, index) => ({
-          routeId: duty.routeId,
-          fleetBusId: index === 0
-            ? (picks[duty.routeId] || null)
-            : (oppositeBusId(picks[duties[0]?.routeId], buses) || null)
+        assignments: buses.map((bus) => ({
+          fleetBusId: bus._id,
+          routeIds: routes.filter((route) => picks[bus._id]?.[route._id]).map((route) => route._id)
         }))
       });
       await load(date);
-      setMessage(`Saved bus numbers from ${displayDate(date)}. Daily account on this date and later uses these buses. Earlier dates stay unchanged.`);
+      setMessage(`Saved both buses from ${displayDate(date)}. Daily account on this date and later uses these routes. Earlier dates stay unchanged.`);
     } catch (err) {
       setError(err.response?.data?.error || 'Could not save bus routes.');
     } finally {
@@ -89,7 +93,7 @@ export default function BmsRoutes() {
         <div>
           <h1 className="font-display text-2xl font-bold mb-1">Routes</h1>
           <p className="text-sm text-brand-charcoal/50">
-            Choose the bus for Indore → Gwalior. Gwalior → Indore automatically gets the other bus, so both towns stay connected.
+            First card is bus 7311, second is 7312. Each bus can run both Gwalior ↔ Indore directions.
           </p>
         </div>
         <label className="text-xs font-bold">
@@ -107,68 +111,52 @@ export default function BmsRoutes() {
       {error && <p className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
 
       <div className="space-y-4">
-        {duties.map((duty, index) => {
-          const isReturn = index > 0;
-          const firstPick = duties[0] ? picks[duties[0].routeId] : '';
-          const selected = isReturn ? oppositeBusId(firstPick, buses) : (picks[duty.routeId] || '');
-          const shownBus = buses.find((bus) => String(bus._id) === String(selected));
+        {buses.map((bus) => {
+          const lastFrom = duties.find((duty) => String(duty.fleetBusId) === String(bus._id))?.effectiveFrom;
           return (
-          <div key={duty.routeId} className="bg-white border border-brand-charcoal/10 rounded-2xl p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <div>
-                <div className="font-display font-bold text-lg">{duty.from} → {duty.to}</div>
-                <div className="text-xs text-brand-charcoal/45 mt-0.5">
-                  {duty.type} · {duty.departure} · ₹{duty.price}
-                  {isReturn ? ' · opposite of the first route' : ''}
-                  {duty.effectiveFrom && duty.effectiveFrom !== date && (
-                    <span> · last set {displayDate(duty.effectiveFrom)}</span>
-                  )}
+            <div key={bus._id} className="bg-white border border-brand-charcoal/10 rounded-2xl p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                  <div className="font-display font-bold text-lg">Bus {bus.code}</div>
+                  <div className="text-xs text-brand-charcoal/45 mt-0.5">
+                    Gwalior ↔ Indore
+                    {lastFrom && lastFrom !== date && (
+                      <span> · last set {displayDate(lastFrom)}</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              {shownBus && (
                 <span className="text-sm font-mono font-bold px-3 py-1.5 rounded-full bg-brand-red/10 text-brand-red">
-                  Bus {shownBus.code}
+                  {bus.code}
                 </span>
-              )}
-            </div>
-            {isReturn ? (
-              <div>
-                <div className="text-xs font-bold mb-1">Bus number (auto)</div>
-                <div className="w-full max-w-sm border rounded-xl px-3 py-2 text-sm bg-brand-cream/70 text-brand-charcoal">
-                  {shownBus ? busLabel(buses, selected) : 'Select the first route’s bus — this side takes the other one'}
-                </div>
-                <p className="text-xs text-brand-charcoal/45 mt-2">
-                  This return trip uses the other coach so the two buses connect Indore and Gwalior both ways.
-                </p>
               </div>
-            ) : (
-              <label className="text-xs font-bold block">
-                Bus number
-                <select
-                  value={picks[duty.routeId] || ''}
-                  onChange={(e) => {
-                    const chosen = e.target.value;
-                    const rest = duties.slice(1);
-                    setPicks((prev) => {
-                      const next = { ...prev, [duty.routeId]: chosen };
-                      rest.forEach((other) => {
-                        next[other.routeId] = oppositeBusId(chosen, buses);
-                      });
-                      return next;
-                    });
-                  }}
-                  className="mt-1 w-full max-w-sm border rounded-xl px-3 py-2 font-normal text-sm"
-                >
-                  <option value="">Select bus number</option>
-                  {buses.map((bus) => (
-                    <option key={bus._id} value={bus._id}>
-                      {bus.code}{bus.name ? ` · ${bus.name}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </div>
+              <div className="text-xs font-bold mb-2">Routes for this bus</div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {routes.map((route) => {
+                  const checked = Boolean(picks[bus._id]?.[route._id]);
+                  return (
+                    <label
+                      key={route._id}
+                      className={`flex items-start gap-3 border rounded-xl px-3 py-3 cursor-pointer ${
+                        checked ? 'border-brand-red/40 bg-brand-red/5' : 'border-brand-charcoal/15 bg-white'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleRoute(bus._id, route._id)}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="block text-sm font-bold">{route.from} → {route.to}</span>
+                        <span className="block text-xs text-brand-charcoal/45 mt-0.5">
+                          {route.type} · {route.departure} · ₹{route.price}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           );
         })}
       </div>
@@ -181,7 +169,7 @@ export default function BmsRoutes() {
           className="inline-flex items-center gap-2 bg-brand-red text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-60"
         >
           <Save size={16} />
-          {saving ? 'Saving...' : 'Save bus numbers'}
+          {saving ? 'Saving...' : 'Save bus routes'}
         </button>
         <Link to="/bmsadmin" className="text-sm font-bold text-brand-red">
           Open Daily account →
