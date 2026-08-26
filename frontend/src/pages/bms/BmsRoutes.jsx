@@ -15,6 +15,18 @@ function displayDate(iso) {
   return `${d}/${m}/${y}`;
 }
 
+function oppositeBusId(selectedId, buses) {
+  if (!selectedId) return '';
+  const other = buses.find((bus) => String(bus._id) !== String(selectedId));
+  return other ? String(other._id) : '';
+}
+
+function busLabel(buses, id) {
+  const bus = buses.find((item) => String(item._id) === String(id));
+  if (!bus) return '';
+  return `${bus.code}${bus.name ? ` · ${bus.name}` : ''}`;
+}
+
 export default function BmsRoutes() {
   const [date, setDate] = useState(todayISO());
   const [duties, setDuties] = useState([]);
@@ -32,9 +44,14 @@ export default function BmsRoutes() {
     setDuties(nextDuties);
     setBuses(nextBuses);
     const nextPicks = {};
-    nextDuties.forEach((duty) => {
-      nextPicks[duty.routeId] = duty.fleetBusId ? String(duty.fleetBusId) : '';
+    nextDuties.forEach((duty, index) => {
+      if (index === 0) {
+        nextPicks[duty.routeId] = duty.fleetBusId ? String(duty.fleetBusId) : '';
+      }
     });
+    if (nextDuties[0] && nextDuties[1]) {
+      nextPicks[nextDuties[1].routeId] = oppositeBusId(nextPicks[nextDuties[0].routeId], nextBuses);
+    }
     setPicks(nextPicks);
   };
 
@@ -50,9 +67,11 @@ export default function BmsRoutes() {
     try {
       await api.put('/bms/route-duties', {
         date,
-        assignments: duties.map((duty) => ({
+        assignments: duties.map((duty, index) => ({
           routeId: duty.routeId,
-          fleetBusId: picks[duty.routeId] || null
+          fleetBusId: index === 0
+            ? (picks[duty.routeId] || null)
+            : (oppositeBusId(picks[duties[0]?.routeId], buses) || null)
         }))
       });
       await load(date);
@@ -70,7 +89,7 @@ export default function BmsRoutes() {
         <div>
           <h1 className="font-display text-2xl font-bold mb-1">Routes</h1>
           <p className="text-sm text-brand-charcoal/50">
-            Choose the bus number for Indore → Gwalior and Gwalior → Indore. Then open Daily account and pick the date.
+            Choose the bus for Indore → Gwalior. Gwalior → Indore automatically gets the other bus, so both towns stay connected.
           </p>
         </div>
         <label className="text-xs font-bold">
@@ -88,41 +107,70 @@ export default function BmsRoutes() {
       {error && <p className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
 
       <div className="space-y-4">
-        {duties.map((duty) => (
+        {duties.map((duty, index) => {
+          const isReturn = index > 0;
+          const firstPick = duties[0] ? picks[duties[0].routeId] : '';
+          const selected = isReturn ? oppositeBusId(firstPick, buses) : (picks[duty.routeId] || '');
+          const shownBus = buses.find((bus) => String(bus._id) === String(selected));
+          return (
           <div key={duty.routeId} className="bg-white border border-brand-charcoal/10 rounded-2xl p-5">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
                 <div className="font-display font-bold text-lg">{duty.from} → {duty.to}</div>
                 <div className="text-xs text-brand-charcoal/45 mt-0.5">
                   {duty.type} · {duty.departure} · ₹{duty.price}
+                  {isReturn ? ' · opposite of the first route' : ''}
                   {duty.effectiveFrom && duty.effectiveFrom !== date && (
                     <span> · last set {displayDate(duty.effectiveFrom)}</span>
                   )}
                 </div>
               </div>
-              {duty.busCode && (
+              {shownBus && (
                 <span className="text-sm font-mono font-bold px-3 py-1.5 rounded-full bg-brand-red/10 text-brand-red">
-                  Bus {duty.busCode}
+                  Bus {shownBus.code}
                 </span>
               )}
             </div>
-            <label className="text-xs font-bold block">
-              Bus number
-              <select
-                value={picks[duty.routeId] || ''}
-                onChange={(e) => setPicks((prev) => ({ ...prev, [duty.routeId]: e.target.value }))}
-                className="mt-1 w-full max-w-sm border rounded-xl px-3 py-2 font-normal text-sm"
-              >
-                <option value="">Select bus number</option>
-                {buses.map((bus) => (
-                  <option key={bus._id} value={bus._id}>
-                    {bus.code}{bus.name ? ` · ${bus.name}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {isReturn ? (
+              <div>
+                <div className="text-xs font-bold mb-1">Bus number (auto)</div>
+                <div className="w-full max-w-sm border rounded-xl px-3 py-2 text-sm bg-brand-cream/70 text-brand-charcoal">
+                  {shownBus ? busLabel(buses, selected) : 'Select the first route’s bus — this side takes the other one'}
+                </div>
+                <p className="text-xs text-brand-charcoal/45 mt-2">
+                  This return trip uses the other coach so the two buses connect Indore and Gwalior both ways.
+                </p>
+              </div>
+            ) : (
+              <label className="text-xs font-bold block">
+                Bus number
+                <select
+                  value={picks[duty.routeId] || ''}
+                  onChange={(e) => {
+                    const chosen = e.target.value;
+                    const rest = duties.slice(1);
+                    setPicks((prev) => {
+                      const next = { ...prev, [duty.routeId]: chosen };
+                      rest.forEach((other) => {
+                        next[other.routeId] = oppositeBusId(chosen, buses);
+                      });
+                      return next;
+                    });
+                  }}
+                  className="mt-1 w-full max-w-sm border rounded-xl px-3 py-2 font-normal text-sm"
+                >
+                  <option value="">Select bus number</option>
+                  {buses.map((bus) => (
+                    <option key={bus._id} value={bus._id}>
+                      {bus.code}{bus.name ? ` · ${bus.name}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">

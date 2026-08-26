@@ -14,7 +14,13 @@ async function coreRoutes() {
       { from: /^Gwalior$/i, to: /^Indore$/i }
     ]
   }).sort({ from: 1 });
-  return routes.filter((route) => route.active !== false);
+  const list = routes.filter((route) => route.active !== false);
+  list.sort((a, b) => {
+    const aFirst = /^Indore$/i.test(a.from) ? 0 : 1;
+    const bFirst = /^Indore$/i.test(b.from) ? 0 : 1;
+    return aFirst - bFirst;
+  });
+  return list;
 }
 
 async function resolveDuties(date) {
@@ -45,10 +51,25 @@ async function resolveDuties(date) {
 
 async function saveDuties(date, assignments = []) {
   const routes = await coreRoutes();
+  const fleet = await FleetBus.find({ status: { $ne: 'inactive' } }).sort({ code: 1 });
+  const paired = [...assignments];
+
+  if (routes.length >= 2) {
+    const firstId = String(paired.find((item) => String(item.routeId) === String(routes[0]._id))?.fleetBusId || '');
+    if (firstId) {
+      const opposite = fleet.find((bus) => String(bus._id) !== firstId);
+      const secondRouteId = String(routes[1]._id);
+      const idx = paired.findIndex((item) => String(item.routeId) === secondRouteId);
+      const oppositeId = opposite?._id || null;
+      if (idx >= 0) paired[idx] = { routeId: routes[1]._id, fleetBusId: oppositeId };
+      else paired.push({ routeId: routes[1]._id, fleetBusId: oppositeId });
+    }
+  }
+
   const usedBuses = new Set();
   const saved = [];
   for (const route of routes) {
-    const match = assignments.find((item) => String(item.routeId) === String(route._id));
+    const match = paired.find((item) => String(item.routeId) === String(route._id));
     const fleetBusId = match?.fleetBusId || null;
     let bus = null;
     if (fleetBusId) {
