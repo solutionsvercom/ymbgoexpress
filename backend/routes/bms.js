@@ -15,6 +15,7 @@ const BillPhoto = require('../models/BillPhoto');
 const { money, withLedgerTotals, withOfficeTotals } = require('../utils/ledgerMath');
 const { extractBill, visionConfigured } = require('../utils/billScan');
 const { uploadBill, billsDir } = require('../middleware/upload');
+const { resolveDuties, saveDuties } = require('../utils/routeDuties');
 
 const router = express.Router();
 router.use(auth);
@@ -73,6 +74,27 @@ router.delete('/buses/:id', async (req, res) => {
   const bus = await FleetBus.findByIdAndDelete(req.params.id).catch(() => null);
   if (!bus) return res.status(404).json({ success: false, error: 'Bus not found' });
   res.json({ success: true, message: 'Bus deleted' });
+});
+
+router.get('/route-duties', async (req, res) => {
+  const date = String(req.query.date || '').trim();
+  if (!date) return res.status(400).json({ success: false, error: 'date is required' });
+  const [duties, buses] = await Promise.all([
+    resolveDuties(date),
+    FleetBus.find({ status: { $ne: 'inactive' } }).select('code name status').sort({ code: 1 })
+  ]);
+  res.json({ success: true, data: { date, duties, buses } });
+});
+
+router.put('/route-duties', async (req, res) => {
+  try {
+    const date = String(req.body.date || '').trim();
+    if (!date) return res.status(400).json({ success: false, error: 'date is required' });
+    const duties = await saveDuties(date, req.body.assignments || []);
+    res.json({ success: true, data: { date, duties } });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'Could not save bus routes' });
+  }
 });
 
 router.get('/offices', async (_req, res) => {
@@ -245,15 +267,25 @@ function normalizeExpenses(input = {}) {
 router.get('/ledgers', async (req, res) => {
   const date = String(req.query.date || '').trim();
   if (!date) return res.status(400).json({ success: false, error: 'date is required' });
-  const [buses, ledgers] = await Promise.all([
-    FleetBus.find({ status: { $ne: 'inactive' } }).populate('routeId', 'from to type').sort({ code: 1 }),
+  const [duties, ledgers] = await Promise.all([
+    resolveDuties(date),
     TripLedger.find({ date }).sort({ busCode: 1 })
   ]);
+  const buses = duties
+    .filter((duty) => duty.busCode)
+    .map((duty) => ({
+      _id: duty.fleetBusId,
+      code: duty.busCode,
+      name: duty.busName || duty.routeLabel,
+      routeId: { from: duty.from, to: duty.to, type: duty.type },
+      dutyFrom: duty.effectiveFrom
+    }));
   res.json({
     success: true,
     data: {
       date,
       buses,
+      duties,
       ledgers: ledgers.map(withLedgerTotals)
     }
   });

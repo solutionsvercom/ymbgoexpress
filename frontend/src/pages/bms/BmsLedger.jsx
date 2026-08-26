@@ -174,6 +174,7 @@ function AmountInput({ value, onChange, ariaLabel }) {
 export default function BmsLedger() {
   const [date, setDate] = useState(todayISO());
   const [sheets, setSheets] = useState([]);
+  const [dutyFrom, setDutyFrom] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState('');
   const [message, setMessage] = useState('');
@@ -201,6 +202,7 @@ export default function BmsLedger() {
       const { data } = await api.get('/bms/ledgers', { params: { date: selectedDate } });
       const buses = data.data?.buses || [];
       const ledgers = data.data?.ledgers || [];
+      setDutyFrom(buses.find((bus) => bus.dutyFrom)?.dutyFrom || '');
       setSheets(buses.map((bus) => {
         const match = ledgers.find((row) => row.busCode === bus.code);
         return sheetFrom(bus, match, selectedDate);
@@ -273,7 +275,7 @@ export default function BmsLedger() {
           <p className="text-[10px] font-bold uppercase tracking-wider text-brand-red mb-1">Daily register</p>
           <h1 className="font-display text-2xl font-bold">Bus account — Aavak / Kharcha</h1>
           <p className="text-sm text-brand-charcoal/50 mt-1">
-            Fill each bus first, then office Kharcha below. Or upload a bill book photo to fill amounts automatically.
+            First set bus numbers on Routes. This date shows those buses until you save a new selection that starts on an earlier or same date.
           </p>
         </div>
         <label className="text-xs font-bold">
@@ -286,6 +288,11 @@ export default function BmsLedger() {
           />
         </label>
       </div>
+      {dutyFrom && (
+        <p className="text-xs text-brand-charcoal/45 -mt-4 mb-6">
+          Bus numbers for this day come from Routes last saved on {displayDate(dutyFrom)}. Saving new buses on a later date will not change this day.
+        </p>
+      )}
 
       {message && <p className="mb-4 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">{message}</p>}
       {error && <p className="mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2">{error}</p>}
@@ -302,7 +309,9 @@ export default function BmsLedger() {
           />
           {sheets.length === 0 ? (
             <p className="text-sm text-brand-charcoal/55">
-              No buses found. Add 7311 and 7312 from <a className="text-brand-red font-bold" href="/bmsadmin/buses">Buses</a>.
+              No bus numbers are set for {displayDate(date)}. Choose buses on{' '}
+              <a className="text-brand-red font-bold" href="/bmsadmin/routes">Routes</a>
+              {' '}for this date first, then come back here.
             </p>
           ) : (
             sheets.map((sheet, index) => {

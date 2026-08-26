@@ -7,9 +7,9 @@ import {
 import api from '../../lib/api';
 
 const links = [
+  { to: '/bmsadmin/routes', label: 'Routes', icon: RouteIcon },
   { to: '/bmsadmin', label: 'Daily account', icon: BookOpen, end: true },
   { to: '/bmsadmin/buses', label: 'Buses', icon: Bus },
-  { to: '/bmsadmin/routes', label: 'Routes', icon: RouteIcon },
   { to: '/bmsadmin/offline', label: 'Offline', icon: Ticket },
   { to: '/bmsadmin/offices', label: 'Branches', icon: Building2 },
   { to: '/bmsadmin/agents', label: 'Agents', icon: Users },

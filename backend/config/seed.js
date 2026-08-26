@@ -7,6 +7,7 @@ const seedRoutes = require('../data/routes');
 const seedSchedules = require('../data/schedules');
 
 const FleetBus = require('../models/FleetBus');
+const { seedDefaultDuties } = require('../utils/routeDuties');
 const Office = require('../models/Office');
 const Agent = require('../models/Agent');
 const Integration = require('../models/Integration');
@@ -177,6 +178,7 @@ async function seed() {
     { code: { $in: ['BUS-01', 'BUS-02', 'BUS7311', 'BUS7312'] } },
     { $set: { status: 'inactive' } }
   );
+  await seedDefaultDuties();
 }
 
 module.exports = seed;
